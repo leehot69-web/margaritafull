@@ -367,8 +367,8 @@ function App() {
 
   const handleUpdateQuantity = (cartItemId: string, newQuantity: number) => {
     const item = cart.find(i => i.id === cartItemId);
-    if (item?.isServed && newQuantity < item.quantity) {
-      alert("No puedes reducir la cantidad de un producto ya servido sin autorización (usa el botón de Borrar con PIN si es necesario).");
+    if (item?.isServed) {
+      alert("No puedes modificar un producto ya servido. Para pedir una unidad adicional, agrégala como un nuevo producto desde el menú.");
       return;
     }
     if (newQuantity <= 0) {

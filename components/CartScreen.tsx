@@ -97,7 +97,7 @@ const CartScreen: React.FC<CartScreenProps> = (props) => {
                 {cart.map(item => {
                     const modTotal = item.selectedModifiers.reduce((s, m) => s + m.option.price, 0);
                     const unitPrice = item.price + modTotal;
-                    const isOriginal = item.notes === 'original';
+                    const isOriginal = item.isServed;
 
                     return (
                         <div key={item.id} className={`bg-white p-4 rounded-xl shadow-sm border ${isOriginal ? 'border-amber-200 bg-amber-50/20' : 'border-gray-100'} flex flex-col`}>
@@ -140,15 +140,23 @@ const CartScreen: React.FC<CartScreenProps> = (props) => {
                                     {isOriginal && <span className="text-[9px] font-bold text-amber-600 italic">Previamente enviado</span>}
                                 </div>
                                 <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border">
-                                    {!isOriginal ? (
-                                        <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 font-black active:bg-gray-100 border">-</button>
+                                    {isOriginal ? (
+                                        <>
+                                            <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-md text-gray-300 border border-gray-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                            </div>
+                                            <span className="font-black text-gray-400 w-6 text-center text-sm">{item.quantity}</span>
+                                            <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-md text-gray-300 border border-gray-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                            </div>
+                                        </>
                                     ) : (
-                                        <div className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-md text-gray-300 border border-gray-200">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                        </div>
+                                        <>
+                                            <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 font-black active:bg-gray-100 border">-</button>
+                                            <span className="font-black text-gray-800 w-6 text-center text-sm">{item.quantity}</span>
+                                            <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 font-black active:bg-gray-100 border">+</button>
+                                        </>
                                     )}
-                                    <span className="font-black text-gray-800 w-6 text-center text-sm">{item.quantity}</span>
-                                    <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-gray-600 font-black active:bg-gray-100 border">+</button>
                                 </div>
                             </div>
                         </div>
