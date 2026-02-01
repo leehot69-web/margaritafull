@@ -30,7 +30,7 @@ const formatLine = (left: string, right: string, width: number): string => {
   return `${leftTruncated}${' '.repeat(Math.max(0, spaceCount))}${cleanRight}\n`;
 };
 
-export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDetails, settings: PrintSettings, waiterName: string): string => {
+export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDetails, settings: PrintSettings, waiterName: string, title: string = 'RECIBO DE PEDIDO', previousTotal: number = 0): string => {
   const paperWidth = settings.printerPaperWidth === '80mm' ? 42 : 30;
   const divider = '-'.repeat(paperWidth) + '\n';
   let commands = '';
@@ -50,7 +50,7 @@ export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDeta
   commands += '\x1B\x21\x30'; // Double height, double width
   commands += `${cleanText(settings.businessName)}\n`;
   commands += '\x1B\x21\x00'; // Normal size
-  commands += `RECIBO DE PEDIDO\n`;
+  commands += `${cleanText(title)}\n`;
   commands += '\x1B\x61\x30'; // Left align
 
   // Order Details
@@ -67,6 +67,16 @@ export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDeta
   commands += formatLine('PRODUCTO', 'TOTAL', paperWidth);
   commands += divider;
 
+  // Insertar saldo pendiente como la primera línea si existe
+  if (previousTotal > 0) {
+    commands += `\x1B\x21\x08`; // Bold
+    const debtLabel = cleanText("(- SALDO PENDIENTE -)");
+    commands += `${debtLabel}\n`;
+    commands += formatLine("  MONTO PREVIO", `$${previousTotal.toFixed(2)}`, paperWidth);
+    commands += '\x1B\x21\x00'; // Normal
+    commands += '-'.repeat(Math.floor(paperWidth / 2)) + '\n';
+  }
+
   cart.forEach(item => {
     const modTotal = item.selectedModifiers.reduce((s, m) => s + m.option.price, 0);
     const itemTotal = (item.price + modTotal) * item.quantity;
@@ -76,18 +86,25 @@ export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDeta
     commands += '\x1B\x21\x00'; // Normal
 
     if (item.selectedModifiers.length > 0) {
-      // Agrupar modificadores por grupo
-      const groups: Record<string, string[]> = {};
       item.selectedModifiers.forEach(m => {
-        if (!groups[m.groupTitle]) groups[m.groupTitle] = [];
-        groups[m.groupTitle].push(m.option.name);
-      });
+        // Formateo especial para modificadores de pizza (mitades e ingredientes base)
+        let label = m.groupTitle;
 
-      Object.entries(groups).forEach(([groupTitle, options]) => {
-        const groupText = `  ${groupTitle}:`;
-        commands += cleanText(groupText).substring(0, paperWidth) + '\n';
-        const optionsText = `    ${options.join(', ')}`;
-        commands += cleanText(optionsText).substring(0, paperWidth) + '\n';
+        // Limpiar iconos y normalizar nombres de grupos para la impresora
+        if (label.includes('IZQUIERDA')) label = 'MITAD IZQ';
+        else if (label.includes('DERECHA')) label = 'MITAD DER';
+        else if (label.includes('TODA LA PIZZA')) label = 'TODA';
+        else if (label.includes('INGREDIENTES BASE')) label = 'BASE';
+        else if (label.includes('ADICIONAL') || label.includes('EXTRA')) label = 'ADIC';
+        else if (label.includes('Tamanio') || label.includes('Tamaño')) label = 'TAM';
+        else label = label.substring(0, 10); // Limitar otros grupos
+
+        const text = `  ${label}: ${m.option.name}`;
+        // Dividir el texto si es muy largo para que no se corte feo
+        const wrappedText = text.match(new RegExp(`.{1,${paperWidth}}`, 'g')) || [text];
+        wrappedText.forEach(line => {
+          commands += cleanText(line) + '\n';
+        });
       });
     }
   });
@@ -95,9 +112,11 @@ export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDeta
   commands += divider;
 
   // Totals
+  const finalTotal = cartTotal + previousTotal;
+
   commands += '\x1B\x61\x32'; // Right align
   commands += '\x1B\x21\x30'; // Large text
-  commands += `TOTAL: $${cartTotal.toFixed(2)}\n`;
+  commands += `TOTAL: $${finalTotal.toFixed(2)}\n`;
   commands += '\x1B\x21\x00'; // Reset
 
   commands += '\x1B\x61\x30'; // Left align
@@ -112,6 +131,9 @@ export const generateReceiptCommands = (cart: CartItem[], customer: CustomerDeta
 
   commands += '\n\x1B\x61\x31';
   commands += 'GRACIAS POR SU COMPRA!\n';
+  commands += '\x1B\x21\x01'; // Small font
+  commands += `ATENDIDO POR: ${cleanText(waiterName)}\n`;
+  commands += '\x1B\x21\x00'; // Normal size
 
   // AVANCE DE PAPEL Y CORTE
   commands += '\n\n\n\n\n';
@@ -170,15 +192,22 @@ export const generateEscPosCommands = (table: Table, settings: PrintSettings, wa
     commands += `${item.quantity}X ${cleanText(item.name)}\n`;
     commands += '\x1B\x21\x00';
     if (item.selectedModifiers.length > 0) {
-      const groups: Record<string, string[]> = {};
       item.selectedModifiers.forEach(m => {
-        if (!groups[m.groupTitle]) groups[m.groupTitle] = [];
-        groups[m.groupTitle].push(m.option.name);
-      });
+        let label = m.groupTitle;
 
-      Object.entries(groups).forEach(([groupTitle, options]) => {
-        commands += `  ${cleanText(groupTitle)}:\n`;
-        commands += `    ${cleanText(options.join(', '))}\n`;
+        if (label.includes('IZQUIERDA')) label = 'MITAD IZQ';
+        else if (label.includes('DERECHA')) label = 'MITAD DER';
+        else if (label.includes('TODA LA PIZZA')) label = 'TODA';
+        else if (label.includes('INGREDIENTES BASE')) label = 'BASE';
+        else if (label.includes('ADICIONAL') || label.includes('EXTRA')) label = 'ADIC';
+        else if (label.includes('Tamanio') || label.includes('Tamaño')) label = 'TAM';
+        else label = label.substring(0, 10);
+
+        const text = `  ${label}: ${m.option.name}`;
+        const wrappedText = text.match(new RegExp(`.{1,${paperWidth}}`, 'g')) || [text];
+        wrappedText.forEach(line => {
+          commands += cleanText(line) + '\n';
+        });
       });
     }
   });
@@ -208,15 +237,22 @@ export const generateKitchenOrderCommands = (table: Table, settings: PrintSettin
   itemsToPrint.forEach(item => {
     commands += `\x1B\x21\x08${item.quantity}X ${cleanText(item.name)}\n\x1B\x21\x00`;
     if (item.selectedModifiers.length > 0) {
-      const groups: Record<string, string[]> = {};
       item.selectedModifiers.forEach(m => {
-        if (!groups[m.groupTitle]) groups[m.groupTitle] = [];
-        groups[m.groupTitle].push(m.option.name);
-      });
+        let label = m.groupTitle;
 
-      Object.entries(groups).forEach(([groupTitle, options]) => {
-        commands += `  ${cleanText(groupTitle)}:\n`;
-        commands += `    ${cleanText(options.join(', '))}\n`;
+        if (label.includes('IZQUIERDA')) label = 'MITAD IZQ';
+        else if (label.includes('DERECHA')) label = 'MITAD DER';
+        else if (label.includes('TODA LA PIZZA')) label = 'TODA';
+        else if (label.includes('INGREDIENTES BASE')) label = 'BASE';
+        else if (label.includes('ADICIONAL') || label.includes('EXTRA')) label = 'ADIC';
+        else if (label.includes('Tamanio') || label.includes('Tamaño')) label = 'TAM';
+        else label = label.substring(0, 10);
+
+        const text = `  ${label}: ${m.option.name}`;
+        const wrappedText = text.match(new RegExp(`.{1,${paperWidth}}`, 'g')) || [text];
+        wrappedText.forEach(line => {
+          commands += cleanText(line) + '\n';
+        });
       });
     }
   });

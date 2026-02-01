@@ -15,6 +15,7 @@ interface ReportsScreenProps {
     isPrinterConnected: boolean;
     onEditPendingReport: (report: SaleRecord, targetView?: View) => void;
     onVoidReport: (reportId: string) => void;
+    isAdmin: boolean;
 }
 
 const DayClosureModal: React.FC<{
@@ -23,10 +24,11 @@ const DayClosureModal: React.FC<{
     onClose: () => void;
     onStartNewDay: () => void;
     currentWaiter: string;
-}> = ({ reports, settings, onClose, onStartNewDay, currentWaiter }) => {
+    isAdmin: boolean;
+}> = ({ reports, settings, onClose, onStartNewDay, currentWaiter, isAdmin }) => {
     const exchangeRate = settings.activeExchangeRate === 'bcv' ? settings.exchangeRateBCV : settings.exchangeRateParallel;
     const today = new Date().toISOString().split('T')[0];
-    const filteredReports = reports.filter(r => r.date === today && r.waiter === currentWaiter);
+    const filteredReports = reports.filter(r => r.date === today && (isAdmin ? true : r.waiter === currentWaiter));
     const totalPaid = filteredReports.reduce((acc, r) => (r.notes !== 'PENDIENTE' && r.notes !== 'ANULADO') ? acc + (r.type === 'refund' ? -r.total : r.total) : acc, 0);
     const totalPending = filteredReports.reduce((acc, r) => r.notes === 'PENDIENTE' ? acc + r.total : acc, 0);
 
@@ -34,7 +36,7 @@ const DayClosureModal: React.FC<{
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm overflow-y-auto">
             <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 my-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-black uppercase text-gray-800">Cierre de {currentWaiter}</h2>
+                    <h2 className="text-2xl font-black uppercase text-gray-800 tracking-tighter">Cierre {isAdmin ? 'General' : `de ${currentWaiter}`}</h2>
                     <button onClick={onClose} className="p-2 bg-gray-100 rounded-full"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
                 <div className="space-y-4">
@@ -61,15 +63,15 @@ const DayClosureModal: React.FC<{
     );
 };
 
-const ReportsScreen: React.FC<ReportsScreenProps> = ({ reports, onGoToTables, onDeleteReports, storeProfile, settings, onStartNewDay, currentWaiter, onOpenSalesHistory, onReprintSaleRecord, isPrinterConnected, onEditPendingReport, onVoidReport }) => {
+const ReportsScreen: React.FC<ReportsScreenProps> = ({ reports, onGoToTables, onDeleteReports, storeProfile, settings, onStartNewDay, currentWaiter, onOpenSalesHistory, onReprintSaleRecord, isPrinterConnected, onEditPendingReport, onVoidReport, isAdmin }) => {
     const [activeSale, setActiveSale] = useState<SaleRecord | null>(null);
     const [showClosureModal, setShowClosureModal] = useState(false);
     const exchangeRate = settings ? (settings.activeExchangeRate === 'bcv' ? settings.exchangeRateBCV : settings.exchangeRateParallel) : 1;
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
     const filteredByWaiterAndDate = useMemo(() => {
-        return reports.filter(r => r.waiter === currentWaiter && r.date === selectedDate);
-    }, [reports, currentWaiter, selectedDate]);
+        return reports.filter(r => (isAdmin ? true : r.waiter === currentWaiter) && r.date === selectedDate);
+    }, [reports, currentWaiter, selectedDate, isAdmin]);
 
     const totalPaid = filteredByWaiterAndDate.reduce((sum, r) => (r.notes !== 'PENDIENTE' && r.notes !== 'ANULADO') ? (r.type === 'refund' ? sum - r.total : sum + r.total) : sum, 0);
     const totalPending = filteredByWaiterAndDate.reduce((sum, r) => r.notes === 'PENDIENTE' ? sum + r.total : sum, 0);
@@ -94,7 +96,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ reports, onGoToTables, on
                 <header className="flex-shrink-0 flex items-center justify-between p-4 border-b">
                     <button onClick={onGoToTables} className="p-2 bg-gray-100 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
                     <div className="text-center">
-                        <h1 className="text-sm font-black uppercase text-gray-800 leading-none">Ventas de {currentWaiter}</h1>
+                        <h1 className="text-sm font-black uppercase text-gray-800 leading-none">Ventas: {isAdmin ? 'Global' : currentWaiter}</h1>
                     </div>
                     <div className="w-10"></div>
                 </header>
@@ -220,7 +222,7 @@ const ReportsScreen: React.FC<ReportsScreenProps> = ({ reports, onGoToTables, on
                 </div>
             )}
 
-            {showClosureModal && settings && onStartNewDay && <DayClosureModal reports={reports} settings={settings} onClose={() => setShowClosureModal(false)} onStartNewDay={onStartNewDay} currentWaiter={currentWaiter} />}
+            {showClosureModal && settings && onStartNewDay && <DayClosureModal reports={reports} settings={settings} onClose={() => setShowClosureModal(false)} onStartNewDay={onStartNewDay} currentWaiter={currentWaiter} isAdmin={isAdmin} />}
         </>
     );
 };

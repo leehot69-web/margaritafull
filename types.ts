@@ -70,7 +70,7 @@ export interface PizzaConfiguration {
 
 // ============= FIN TIPOS PARA PIZZAS =============
 
-export type ThemeName = 'red' | 'blue' | 'green' | 'dark' | 'white' | 'marine' | 'margarita';
+export type ThemeName = 'red' | 'blue' | 'green' | 'dark' | 'white' | 'marine' | 'margarita' | 'manga';
 
 export interface StoreProfile {
   id: string;
@@ -99,6 +99,7 @@ export interface CartItem {
   quantity: number;
   selectedModifiers: SelectedModifier[];
   notes?: string;
+  isServed?: boolean;
   pizzaConfig?: PizzaConfiguration; // Configuración de pizza si aplica
 }
 
@@ -135,6 +136,7 @@ export interface OrderItem {
   quantity: number;
   selectedModifiers: SelectedModifier[];
   status?: 'cancelled' | 'pending';
+  isServed?: boolean;
   pizzaConfig?: PizzaConfiguration; // Configuración de pizza si aplica
 }
 
@@ -180,15 +182,26 @@ export interface SaleRecord {
   customerName?: string;
 }
 
+export type UserRole = 'admin' | 'mesero' | 'cajero';
+
+export interface User {
+  id: string;
+  name: string;
+  pin: string;
+  role: UserRole;
+}
+
 export interface AppSettings {
   totalTables: number;
   printerPaperWidth: '58mm' | '80mm';
   exchangeRateBCV: number;
   exchangeRateParallel: number;
   activeExchangeRate: 'bcv' | 'parallel';
-  adminPin?: string;
   isTrialActive: boolean;
   operationCount: number;
+  users: User[]; // Lista de usuarios con acceso al sistema
+  targetNumber: string; // Número de WhatsApp de la cocina
+  waitersCanCharge: boolean; // Si los meseros pueden procesar cobros
 }
 
 export type WaiterAssignments = Record<string, number[]>;

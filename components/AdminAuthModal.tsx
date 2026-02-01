@@ -2,13 +2,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 interface AdminAuthModalProps {
-  adminPin: string;
+  validPins: string[];
   onClose: () => void;
   onSuccess: () => void;
   title?: string;
 }
 
-const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ adminPin, onClose, onSuccess, title = "Autorización Requerida" }) => {
+const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ validPins, onClose, onSuccess, title = "Autorización Requerida" }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,7 +29,7 @@ const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ adminPin, onClose, onSu
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === adminPin) {
+    if (validPins.includes(pin)) {
       onSuccess();
     } else {
       setError('PIN incorrecto. Intente de nuevo.');
