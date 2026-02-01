@@ -143,7 +143,7 @@ const MenuScreen: React.FC<MenuScreenProps> = ({
                                 {category.items.filter(i => i.available).map((item) => {
                                     const hasModifiers = item.modifierGroupTitles && item.modifierGroupTitles.length > 0;
                                     const isPizzaItem = item.isPizza || item.isSpecialPizza;
-                                    const cartItemForSimpleProduct = !hasModifiers && !isPizzaItem ? cart.find(ci => ci.name === item.name && ci.selectedModifiers.length === 0) : null;
+                                    const cartItemForSimpleProduct = !hasModifiers && !isPizzaItem ? cart.find(ci => ci.name === item.name && ci.selectedModifiers.length === 0 && !ci.isServed) : null;
                                     const quantityInCart = cartItemForSimpleProduct ? cartItemForSimpleProduct.quantity : 0;
 
                                     return (

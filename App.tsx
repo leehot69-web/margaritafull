@@ -266,6 +266,7 @@ function App() {
   const handleEditPendingReport = (report: SaleRecord, targetView: View = 'cart') => {
     const mappedOrder = (report.order as CartItem[]).map(item => ({
       ...item,
+      // Al cargar un pendiente para editar, los items existentes se consideran "Previos" (servidos)
       isServed: true
     }));
     setCart(mappedOrder);
@@ -521,7 +522,8 @@ function App() {
       tableNumber: parseInt(customerDetails.name) || 0,
       waiter: currentUser?.name || 'Sistema',
       total: cartTotal,
-      order: [...cart],
+      // Al guardar/confirmar el pedido, marcamos todos los items como servidos/procesados
+      order: cart.map(i => ({ ...i, isServed: true })),
       type: 'sale',
       notes: isPaid ? customerDetails.paymentMethod : 'PENDIENTE',
       customerName: customerDetails.name
@@ -578,7 +580,7 @@ function App() {
     message += `\n*🛒 DETALLE:* \n`;
 
     itemsToSend.forEach(item => {
-      message += `▪️ *${item.quantity}x ${item.name}* ${!shouldSendPartial && item.isServed ? '_(Ya servido)_' : ''}\n`;
+      message += `▪️ *${item.quantity}x ${item.name}* ${!shouldSendPartial && item.isServed ? '_(Previo)_' : ''}\n`;
 
       if (item.selectedModifiers.length > 0) {
         const groups: Record<string, string[]> = {};
