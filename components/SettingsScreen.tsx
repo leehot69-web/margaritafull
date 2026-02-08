@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppSettings, StoreProfile, ThemeName, MenuCategory, MenuItem, ModifierGroup, PizzaIngredient, User, UserRole } from '../types';
+import { AppSettings, StoreProfile, ThemeName, MenuCategory, MenuItem, ModifierGroup, PizzaIngredient, User, UserRole, RolePermissions } from '../types';
 import MenuManagementModal from './MenuManagementModal';
 import PriceIncreaseModal from './PriceIncreaseModal';
 
@@ -330,11 +330,53 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
               <span className="text-[9px] text-gray-500 font-medium">Permite a meseros finalizar ventas</span>
             </div>
             <button
-              onClick={() => setLocalSettings({ ...localSettings, waitersCanCharge: !localSettings.waitersCanCharge })}
+              onClick={() => {
+                const newSettings = { ...localSettings, waitersCanCharge: !localSettings.waitersCanCharge };
+                setLocalSettings(newSettings);
+                onSaveSettings(newSettings);
+              }}
               className={`w-12 h-6 rounded-full transition-colors relative ${localSettings.waitersCanCharge ? 'bg-green-500' : 'bg-gray-300'}`}
             >
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${localSettings.waitersCanCharge ? 'right-1' : 'left-1'}`} />
             </button>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <h3 className="font-bold text-gray-800 px-1 uppercase text-[10px] tracking-widest">Accesos por Rol</h3>
+            <div className="bg-gray-50 rounded-xl border overflow-hidden divide-y">
+              {(['admin', 'mesero', 'cajero'] as UserRole[]).map(role => (
+                <div key={role} className="p-3 bg-white">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-black text-[10px] uppercase text-brand">{role}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['menu', 'reports', 'settings', 'kanban'] as (keyof RolePermissions)[]).map(module => (
+                      <button
+                        key={module}
+                        onClick={() => {
+                          const newPermissions = { ...localSettings.rolePermissions[role], [module]: !localSettings.rolePermissions[role][module] };
+                          const newSettings = {
+                            ...localSettings,
+                            rolePermissions: {
+                              ...localSettings.rolePermissions,
+                              [role]: newPermissions
+                            }
+                          };
+                          setLocalSettings(newSettings);
+                          onSaveSettings(newSettings);
+                        }}
+                        className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${localSettings.rolePermissions[role][module] ? 'bg-brand/5 border-brand/20' : 'bg-gray-50 border-gray-100'}`}
+                      >
+                        <div className={`w-3 h-3 rounded-full border ${localSettings.rolePermissions[role][module] ? 'bg-brand border-brand' : 'bg-white border-gray-300'}`} />
+                        <span className={`text-[9px] font-bold uppercase ${localSettings.rolePermissions[role][module] ? 'text-gray-800' : 'text-gray-400'}`}>
+                          {module === 'menu' ? 'Menú' : module === 'reports' ? 'Ventas' : module === 'settings' ? 'Ajustes' : 'Tablero'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           {/* --- GESTIÓN DE USUARIOS / PERSONAL --- */}
           <div className="space-y-4 pt-4 border-t">

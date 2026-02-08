@@ -185,6 +185,15 @@ export interface SaleRecord {
 
 export type UserRole = 'admin' | 'mesero' | 'cajero';
 
+export interface RolePermissions {
+  menu: boolean;
+  reports: boolean;
+  settings: boolean;
+  kanban: boolean;
+}
+
+export type RolePermissionConfig = Record<UserRole, RolePermissions>;
+
 export interface User {
   id: string;
   name: string;
@@ -203,6 +212,7 @@ export interface AppSettings {
   users: User[]; // Lista de usuarios con acceso al sistema
   targetNumber: string; // Número de WhatsApp de la cocina
   waitersCanCharge: boolean; // Si los meseros pueden procesar cobros
+  rolePermissions: RolePermissionConfig; // Configuración de accesos por rol
 }
 // Registro de cierre de caja/turno
 export interface DayClosure {
