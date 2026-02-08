@@ -690,7 +690,9 @@ function App() {
                         setMenu(p.menu);
                         setModifierGroups(p.modifierGroups);
                         setTheme(p.theme);
-                        setSettings(prev => ({ ...prev, targetNumber: p.whatsappNumber }));
+                        // El targetNumber ya se guarda via setSettings en onSaveSettings, 
+                        // no lo actualizamos aquí para evitar sobrescribir otros ajustes (como tasas)
+                        // por condiciones de carrera de React.
                       }
                     }}
                     activeTableNumbers={[]}

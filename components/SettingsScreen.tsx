@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, StoreProfile, ThemeName, MenuCategory, MenuItem, ModifierGroup, PizzaIngredient, User, UserRole } from '../types';
 import MenuManagementModal from './MenuManagementModal';
 import PriceIncreaseModal from './PriceIncreaseModal';
-import UserManagementModal from './UserManagementModal';
 
 interface SettingsScreenProps {
   settings: AppSettings;
@@ -104,24 +103,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
 
   const [localSettings, setLocalSettings] = useState(settings);
   const [localStoreProfiles, setLocalStoreProfiles] = useState(storeProfiles);
+  const [isDirty, setIsDirty] = useState(false);
 
   const [priceIncreaseModalStore, setPriceIncreaseModalStore] = useState<StoreProfile | null>(null);
-  const [isUserModalOpen, setUserModalOpen] = useState(false);
 
-  // isDirty calculado en tiempo real
-  const isDirty = React.useMemo(() => {
-    return JSON.stringify(localSettings) !== JSON.stringify(settings) ||
-      JSON.stringify(localStoreProfiles) !== JSON.stringify(storeProfiles);
+  // Detectar cambios sin re-sincronizar automáticamente
+  useEffect(() => {
+    const settingsChanged = JSON.stringify(localSettings) !== JSON.stringify(settings);
+    const profilesChanged = JSON.stringify(localStoreProfiles) !== JSON.stringify(storeProfiles);
+    setIsDirty(settingsChanged || profilesChanged);
   }, [localSettings, localStoreProfiles, settings, storeProfiles]);
 
-  // RE-SINCRONIZACIÓN: Si las props cambian (porque se guardó o cargó de DB) 
-  // y no estamos editando algo nuevo, actualizamos el estado local.
-  useEffect(() => {
-    if (!isDirty) {
-      setLocalSettings(settings);
-      setLocalStoreProfiles(storeProfiles);
-    }
-  }, [settings, storeProfiles, isDirty]);
 
   const handleSave = () => {
     const mainProfile = localStoreProfiles.find(p => p.id === 'main');
@@ -132,6 +124,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
 
     onSaveSettings(finalSettings);
     onUpdateStoreProfiles(localStoreProfiles);
+    setIsDirty(false);
     alert("✅ Configuración guardada correctamente.");
   };
 
@@ -256,13 +249,57 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 bg-gray-50 rounded-xl border">
               <label className="block text-[8px] font-black text-gray-400 uppercase mb-1">Tasa Paralelo</label>
-              <input type="number" value={localSettings.exchangeRateParallel} onChange={(e) => setLocalSettings({ ...localSettings, exchangeRateParallel: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent font-bold text-black outline-none" />
+              <input
+                type="number"
+                value={localSettings.exchangeRateParallel}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  const newSettings = { ...localSettings, exchangeRateParallel: val };
+                  setLocalSettings(newSettings);
+                  onSaveSettings(newSettings);
+                }}
+                className="w-full bg-transparent font-bold text-black outline-none"
+              />
             </div>
             <div className="p-3 bg-gray-50 rounded-xl border">
               <label className="block text-[8px] font-black text-gray-400 uppercase mb-1">Tasa BCV</label>
-              <input type="number" value={localSettings.exchangeRateBCV} onChange={(e) => setLocalSettings({ ...localSettings, exchangeRateBCV: parseFloat(e.target.value) || 0 })} className="w-full bg-transparent font-bold text-black outline-none" />
+              <input
+                type="number"
+                value={localSettings.exchangeRateBCV}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value) || 0;
+                  const newSettings = { ...localSettings, exchangeRateBCV: val };
+                  setLocalSettings(newSettings);
+                  onSaveSettings(newSettings);
+                }}
+                className="w-full bg-transparent font-bold text-black outline-none"
+              />
             </div>
           </div>
+
+          <div className="p-1 bg-gray-100 rounded-xl flex gap-1">
+            <button
+              onClick={() => {
+                const newSettings = { ...localSettings, activeExchangeRate: 'parallel' as const };
+                setLocalSettings(newSettings);
+                onSaveSettings(newSettings);
+              }}
+              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${localSettings.activeExchangeRate === 'parallel' ? 'bg-white text-black shadow-sm' : 'text-gray-400'}`}
+            >
+              Usar Paralelo
+            </button>
+            <button
+              onClick={() => {
+                const newSettings = { ...localSettings, activeExchangeRate: 'bcv' as const };
+                setLocalSettings(newSettings);
+                onSaveSettings(newSettings);
+              }}
+              className={`flex-1 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${localSettings.activeExchangeRate === 'bcv' ? 'bg-white text-black shadow-sm' : 'text-gray-400'}`}
+            >
+              Usar BCV
+            </button>
+          </div>
+
           <div className="p-3 bg-gray-50 rounded-xl border">
             <label className="block text-[8px] font-black text-gray-400 uppercase mb-1">WhatsApp de Pedidos (Cocina)</label>
             <div className="flex items-center gap-2">
@@ -271,7 +308,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
                 value={localSettings.targetNumber}
                 onChange={(e) => {
                   const val = e.target.value.replace(/\D/g, '');
-                  setLocalSettings({ ...localSettings, targetNumber: val });
+                  const newSettings = { ...localSettings, targetNumber: val };
+                  setLocalSettings(newSettings);
+                  onSaveSettings(newSettings);
                   setLocalStoreProfiles(prev => prev.map(p => p.id === 'main' ? { ...p, whatsappNumber: val } : p));
                 }}
                 className="flex-grow bg-transparent font-bold text-black outline-none"
@@ -297,10 +336,113 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
               <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${localSettings.waitersCanCharge ? 'right-1' : 'left-1'}`} />
             </button>
           </div>
-          <button onClick={() => setUserModalOpen(true)} className="w-full py-4 text-blue-600 font-bold bg-blue-50 rounded-2xl border border-blue-100 flex items-center justify-center gap-2 uppercase text-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-            Gestionar Usuarios
-          </button>
+          {/* --- GESTIÓN DE USUARIOS / PERSONAL --- */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex justify-between items-end px-1">
+              <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest">Gestión de Personal</h3>
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Acceso y Roles</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
+              {/* Lista de Usuarios */}
+              <div className="divide-y divide-gray-200">
+                {localSettings.users.map(user => (
+                  <div key={user.id} className="p-4 flex justify-between items-center bg-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm uppercase">{user.name}</p>
+                        <div className="flex gap-2 items-center">
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${user.role === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {user.role}
+                          </span>
+                          <span className="text-[9px] font-bold text-gray-400 tracking-widest">PIN: {user.pin}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Impedir borrar el único admin por accidente */}
+                    {(user.role !== 'admin' || localSettings.users.filter(u => u.role === 'admin').length > 1) && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`¿Eliminar a ${user.name}?`)) {
+                            const newUsers = localSettings.users.filter(u => u.id !== user.id);
+                            const newSettings = { ...localSettings, users: newUsers };
+                            setLocalSettings(newSettings);
+                            onSaveSettings(newSettings);
+                          }
+                        }}
+                        className="p-2 text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Formulario Agregar Nuevo */}
+              <div className="p-4 bg-gray-50 border-t border-gray-200">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 text-center">Registrar Nuevo Personal</p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    id="new-user-name"
+                    className="w-full p-4 bg-white border border-gray-200 rounded-xl font-bold text-sm outline-none focus:border-red-500 transition-colors"
+                    placeholder="Nombre Completo"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      id="new-user-pin"
+                      maxLength={4}
+                      inputMode="numeric"
+                      className="p-4 bg-white border border-gray-200 rounded-xl font-bold text-sm text-center tracking-widest outline-none focus:border-red-500 transition-colors"
+                      placeholder="PIN (4 Dígitos)"
+                      onChange={(e) => e.target.value = e.target.value.replace(/\D/g, '')}
+                    />
+                    <select
+                      id="new-user-role"
+                      className="p-4 bg-white border border-gray-200 rounded-xl font-bold text-sm outline-none focus:border-red-500 transition-colors"
+                    >
+                      <option value="mesero">Mesero</option>
+                      <option value="admin">Administrador</option>
+                      <option value="cajero">Cajero</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const nameInput = document.getElementById('new-user-name') as HTMLInputElement;
+                      const pinInput = document.getElementById('new-user-pin') as HTMLInputElement;
+                      const roleSelect = document.getElementById('new-user-role') as HTMLSelectElement;
+
+                      if (nameInput.value.trim() && pinInput.value.length === 4) {
+                        const newUser: User = {
+                          id: Math.random().toString(36).substr(2, 9),
+                          name: nameInput.value.trim(),
+                          pin: pinInput.value,
+                          role: roleSelect.value as UserRole
+                        };
+                        const newUsers = [...localSettings.users, newUser];
+                        const newSettings = { ...localSettings, users: newUsers };
+                        setLocalSettings(newSettings);
+                        onSaveSettings(newSettings);
+                        nameInput.value = '';
+                        pinInput.value = '';
+                      } else {
+                        alert("Por favor completa el nombre y un PIN de 4 dígitos.");
+                      }
+                    }}
+                    className="w-full py-4 bg-red-600 text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95 transition-all"
+                  >
+                    Agregar Nuevo Miembro
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <button onClick={() => onClearAllSalesData()} className="w-full py-4 text-red-600 font-bold bg-red-50 rounded-2xl border border-red-100 uppercase text-xs">Limpiar Historial de Ventas</button>
         </div>
 
@@ -323,19 +465,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
           onConfirm={handlePriceIncrease}
         />
       )}
-
-      {isUserModalOpen && (
-        <UserManagementModal
-          users={localSettings.users}
-          onSave={(updatedUsers) => {
-            setLocalSettings(prev => ({ ...prev, users: updatedUsers }));
-            setUserModalOpen(false);
-          }}
-          onClose={() => setUserModalOpen(false)}
-        />
-      )}
     </div>
   );
 };
+
 
 export default SettingsScreen;
