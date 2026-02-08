@@ -341,43 +341,47 @@ const SettingsScreen: React.FC<SettingsScreenProps> = (props) => {
             </button>
           </div>
 
-          <div className="space-y-3 pt-2">
-            <h3 className="font-bold text-gray-800 px-1 uppercase text-[10px] tracking-widest">Accesos por Rol</h3>
-            <div className="bg-gray-50 rounded-xl border overflow-hidden divide-y">
-              {(['admin', 'mesero', 'cajero'] as UserRole[]).map(role => (
-                <div key={role} className="p-3 bg-white">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-black text-[10px] uppercase text-brand">{role}</span>
+          {localSettings.rolePermissions && (
+            <div className="space-y-3 pt-2">
+              <h3 className="font-bold text-gray-800 px-1 uppercase text-[10px] tracking-widest">Accesos por Rol</h3>
+              <div className="bg-gray-50 rounded-xl border overflow-hidden divide-y">
+                {(['admin', 'mesero', 'cajero'] as UserRole[]).map(role => (
+                  <div key={role} className="p-3 bg-white">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-black text-[10px] uppercase text-brand">{role}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['menu', 'reports', 'settings', 'kanban'] as (keyof RolePermissions)[]).map(module => (
+                        <button
+                          key={module}
+                          onClick={() => {
+                            if (!localSettings.rolePermissions) return;
+                            const currentPerms = localSettings.rolePermissions[role] || { menu: true, reports: true, settings: true, kanban: true };
+                            const newPermissions = { ...currentPerms, [module]: !currentPerms[module] };
+                            const newSettings = {
+                              ...localSettings,
+                              rolePermissions: {
+                                ...localSettings.rolePermissions,
+                                [role]: newPermissions
+                              }
+                            };
+                            setLocalSettings(newSettings);
+                            onSaveSettings(newSettings);
+                          }}
+                          className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${localSettings.rolePermissions?.[role]?.[module] ? 'bg-brand/5 border-brand/20' : 'bg-gray-50 border-gray-100'}`}
+                        >
+                          <div className={`w-3 h-3 rounded-full border ${localSettings.rolePermissions?.[role]?.[module] ? 'bg-brand border-brand' : 'bg-white border-gray-300'}`} />
+                          <span className={`text-[9px] font-bold uppercase ${localSettings.rolePermissions?.[role]?.[module] ? 'text-gray-800' : 'text-gray-400'}`}>
+                            {module === 'menu' ? 'Menú' : module === 'reports' ? 'Ventas' : module === 'settings' ? 'Ajustes' : 'Tablero'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['menu', 'reports', 'settings', 'kanban'] as (keyof RolePermissions)[]).map(module => (
-                      <button
-                        key={module}
-                        onClick={() => {
-                          const newPermissions = { ...localSettings.rolePermissions[role], [module]: !localSettings.rolePermissions[role][module] };
-                          const newSettings = {
-                            ...localSettings,
-                            rolePermissions: {
-                              ...localSettings.rolePermissions,
-                              [role]: newPermissions
-                            }
-                          };
-                          setLocalSettings(newSettings);
-                          onSaveSettings(newSettings);
-                        }}
-                        className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${localSettings.rolePermissions[role][module] ? 'bg-brand/5 border-brand/20' : 'bg-gray-50 border-gray-100'}`}
-                      >
-                        <div className={`w-3 h-3 rounded-full border ${localSettings.rolePermissions[role][module] ? 'bg-brand border-brand' : 'bg-white border-gray-300'}`} />
-                        <span className={`text-[9px] font-bold uppercase ${localSettings.rolePermissions[role][module] ? 'text-gray-800' : 'text-gray-400'}`}>
-                          {module === 'menu' ? 'Menú' : module === 'reports' ? 'Ventas' : module === 'settings' ? 'Ajustes' : 'Tablero'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           {/* --- GESTIÓN DE USUARIOS / PERSONAL --- */}
           <div className="space-y-4 pt-4 border-t">
             <div className="flex justify-between items-end px-1">
